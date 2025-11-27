@@ -1,0 +1,150 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iomanip>
+#include <map>
+#include <limits>
+
+using namespace std;
+
+// Base Activity Class
+class Activity {
+protected:
+    string name;
+    double co2Emission; // in kg CO2
+public:
+    Activity(string n) : name(n), co2Emission(0) {}
+    virtual void calculate() = 0; // pure virtual
+    virtual void display() const {
+        cout << setw(20) << left << name << ": " << co2Emission << " kg CO2" << endl;
+    }
+    double getCO2() const { return co2Emission; }
+    virtual ~Activity() {}
+};
+
+// Driving Activity
+class Driving : public Activity {
+    double distance; // in km
+    double fuelEfficiency; // km per liter
+public:
+    Driving() : Activity("Driving"), distance(0), fuelEfficiency(0) {}
+    void calculate() override {
+        cout << "Enter distance driven (km): ";
+        cin >> distance;
+        cout << "Enter fuel efficiency (km/l): ";
+        cin >> fuelEfficiency;
+        co2Emission = (distance / fuelEfficiency) * 2.31; // kg CO2 per liter of gasoline
+    }
+};
+
+// Electricity Usage Activity
+class Electricity : public Activity {
+    double kwh;
+    double emissionFactor; // kg CO2 per kWh
+public:
+    Electricity() : Activity("Electricity Usage"), kwh(0), emissionFactor(0.475) {}
+    void calculate() override {
+        cout << "Enter electricity usage (kWh): ";
+        cin >> kwh;
+        co2Emission = kwh * emissionFactor;
+    }
+};
+
+// Flight Activity
+class Flight : public Activity {
+    double hours;
+public:
+    Flight() : Activity("Flight"), hours(0) {}
+    void calculate() override {
+        cout << "Enter flight duration (hours): ";
+        cin >> hours;
+        co2Emission = hours * 90; // approximate kg CO2 per flight hour
+    }
+};
+
+// Food Activity
+class Food : public Activity {
+    map<string, double> foodEmissions{
+        {"Beef", 27.0}, {"Chicken", 6.9}, {"Vegetarian", 2.0}, {"Fish", 6.1}
+    };
+    string type;
+    double quantity; // in servings
+public:
+    Food() : Activity("Food Consumption"), quantity(0) {}
+    void calculate() override {
+        cout << "Enter type of food (Beef/Chicken/Fish/Vegetarian): ";
+        cin >> type;
+        cout << "Enter quantity (number of servings): ";
+        cin >> quantity;
+        if(foodEmissions.find(type) != foodEmissions.end()) {
+            co2Emission = foodEmissions[type] * quantity;
+        } else {
+            cout << "Unknown food type. Setting emission to 0.\n";
+            co2Emission = 0;
+        }
+    }
+};
+
+// Carbon Footprint Tracker
+class CarbonFootprintTracker {
+    vector<Activity*> activities;
+public:
+    void addActivity(Activity* activity) {
+        activity->calculate();
+        activities.push_back(activity);
+    }
+
+    void generateReport() const {
+        cout << "\n---- Carbon Footprint Report ----\n";
+        double total = 0;
+        for(auto act : activities) {
+            act->display();
+            total += act->getCO2();
+        }
+        cout << "--------------------------------\n";
+        cout << "Total Carbon Footprint: " << total << " kg CO2\n";
+        cout << "Tips to reduce footprint:\n";
+        if(total > 500) cout << "- Consider using public transport or carpooling.\n";
+        if(total > 300) cout << "- Reduce meat consumption.\n";
+        if(total > 200) cout << "- Save electricity: switch off unused devices.\n";
+        cout << "--------------------------------\n";
+    }
+
+    ~CarbonFootprintTracker() {
+        for(auto act : activities) delete act;
+    }
+};
+
+int main() {
+    CarbonFootprintTracker tracker;
+    int choice;
+
+    do {
+        cout << "\nCarbon Footprint Tracker\n";
+        cout << "1. Add Driving Activity\n";
+        cout << "2. Add Electricity Usage\n";
+        cout << "3. Add Flight Activity\n";
+        cout << "4. Add Food Consumption\n";
+        cout << "5. Generate Report and Exit\n";
+        cout << "Choose an option: ";
+        cin >> choice;
+
+        // Clear invalid input
+        if(cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            choice = 0;
+        }
+
+        switch(choice) {
+            case 1: tracker.addActivity(new Driving()); break;
+            case 2: tracker.addActivity(new Electricity()); break;
+            case 3: tracker.addActivity(new Flight()); break;
+            case 4: tracker.addActivity(new Food()); break;
+            case 5: tracker.generateReport(); break;
+            default: cout << "Invalid option. Try again.\n"; break;
+        }
+    } while(choice != 5);
+
+    return 0;
+}
